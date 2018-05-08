@@ -31,7 +31,7 @@ public class Rope : MonoBehaviour {
         //    nodePrefabs[i] = Instantiate(nodePrefab, ropeData.nodes[i].position(), nodePrefab.rotation);
         //}
 
-        lineRenderer.numPositions = nodeCount;
+        lineRenderer.positionCount = nodeCount;
     }
 
 	void Update() {
@@ -46,7 +46,7 @@ public class Rope : MonoBehaviour {
         //}
         for (int i = 0; i < nodeCount; i++)
         {
-            lineRenderer.SetPosition(i, ropeData.nodes[i].position());
+            lineRenderer.SetPosition(i, ropeData.nodes[i].position);
         }
     }
 
@@ -57,7 +57,7 @@ public class Rope : MonoBehaviour {
             Gizmos.color = Color.cyan;
             for (int i = 0; i < ropeData.nodes.Length - 1; i++)
             {
-                Gizmos.DrawLine(ropeData.nodes[i].position(), ropeData.nodes[i + 1].position());
+                Gizmos.DrawLine(ropeData.nodes[i].position, ropeData.nodes[i + 1].position);
             }
         }
     }
@@ -83,9 +83,7 @@ public class Rope : MonoBehaviour {
 
         public void MoveNode(Vector3 _position, int _nodeIndex)
         {
-            nodes[_nodeIndex].x = _position.x;
-            nodes[_nodeIndex].y = _position.y;
-            nodes[_nodeIndex].z = _position.z;
+            nodes[_nodeIndex].position = _position;
         }
 
         public void SetAnchor(int _nodeIndex, bool _isAnchor)
@@ -124,40 +122,26 @@ public class Rope : MonoBehaviour {
 
         void ProcessNodes(int i)
         {
-            float px = 0f;
-            float py = 0f;
-            float pz = 0f;
+            Vector3 p = Vector3.zero;
 
-            nodes[i].x += nodes[i].vx;
-            nodes[i].y += nodes[i].vy;
-            nodes[i].z += nodes[i].vz;
+            nodes[i].position += nodes[i].velocity;
 
             //much more understandable, but when using a vector the rope doesn't unfold when origin is at (0,0,0) 
-            Vector3 dir = new Vector3(nodes[previousNodeIndex].x, nodes[previousNodeIndex].y, nodes[previousNodeIndex].z) - new Vector3(nodes[i].x, nodes[i].y, nodes[i].z);
+            Vector3 dir = nodes[previousNodeIndex].position - nodes[i].position;
             dir.Normalize();
-            px = nodes[i].x + dir.x * nodeSpacing;
-            py = nodes[i].y + dir.y * nodeSpacing;
-            pz = nodes[i].z + dir.z * nodeSpacing;
 
-            nodes[i].x = nodes[previousNodeIndex].x - (px - nodes[i].x);
-            nodes[i].y = nodes[previousNodeIndex].y - (py - nodes[i].y);
-            nodes[i].z = nodes[previousNodeIndex].z - (pz - nodes[i].z);
+            p = nodes[i].position + dir * nodeSpacing;
 
-            nodes[i].vx = nodes[i].x - nodes[i].ox;
-            nodes[i].vy = nodes[i].y - nodes[i].oy;
-            nodes[i].vz = nodes[i].z - nodes[i].oz;
+            nodes[i].position = nodes[previousNodeIndex].position - (p - nodes[i].position);
 
-            nodes[i].vx *= friction * (1 - friction);
-            nodes[i].vy *= friction * (1 - friction);
-            nodes[i].vz *= friction * (1 - friction);
+            nodes[i].velocity = nodes[i].position - nodes[i].oldPosition;
 
-            nodes[i].vx += windForce.x;
-            nodes[i].vy += gravity + windForce.y;
-            nodes[i].vz += windForce.z;
+            nodes[i].velocity *= friction * (1 - friction);
 
-            nodes[i].ox = nodes[i].x;
-            nodes[i].oy = nodes[i].y;
-            nodes[i].oz = nodes[i].z;
+            nodes[i].velocity += windForce;
+            nodes[i].velocity.y += gravity;
+
+            nodes[i].oldPosition = nodes[i].position;
 
             previousNodeIndex = i;
         }
@@ -167,24 +151,13 @@ public class Rope : MonoBehaviour {
     #region Node
     public struct Node
     {
-        public float x;
-        public float y;
-        public float z;
+        public Vector3 position;
 
-        public float ox;
-        public float oy;
-        public float oz;
+        public Vector3 oldPosition;
 
-        public float vx;
-        public float vy;
-        public float vz;
+        public Vector3 velocity;
 
         public bool isAnchor;
-
-        public Vector3 position()
-        {
-            return new Vector3(x, y, z);
-        }
     }
     #endregion
 
